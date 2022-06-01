@@ -146,7 +146,9 @@ func (c *MetricClient) Collect(namespace string, sub string, m *config.Metric, c
 		level.Warn(c.logger).Log("msg", "metric name must been set")
 		return
 	}
-
+	//prometheus 不支持指标名称带点的,注册的时候名字需要替换下,aliyun name带点转换_
+	Name:=strings.ReplaceAll(m.Name,"i_",".")
+	m.Name=Name
 	datapoints, err := c.retrive(sub, m.Name, m.Period)
 	if err != nil {
 		level.Error(c.logger).Log("msg", "failed to retrive datapoints", "cloudID", c.cloudID, "namespace", sub, "name", m.String(), "error", err)
@@ -154,6 +156,9 @@ func (c *MetricClient) Collect(namespace string, sub string, m *config.Metric, c
 	}
 	for _, dp := range datapoints {
 		val := dp.Get(m.Measure)
+		//抓取aliyun指标的时候,需要把名字再替换回来
+		newName:=strings.ReplaceAll(m.Name,".","i_")
+		m.Name=newName
 		ch <- prometheus.MustNewConstMetric(
 			m.Desc(namespace, sub, dp.Labels()...),
 			prometheus.GaugeValue,
